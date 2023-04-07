@@ -2,6 +2,7 @@ from oein import *
 from events.upDownBone import *
 from events.die import *
 from components.InGame.button import *
+import obb
 
 frame = 0
 maxHP = 100
@@ -32,6 +33,13 @@ playerDamagedInThisFrame = False
 
 playerX = 0
 playerY = 0
+
+
+def getPlayerXY():
+    return (
+        playerX + int(Constants["centerx"] - gameLandWidth / 2 + 5) + borderDX,
+        playerY + yflex(1, 2) + 5 + borderDY,
+    )
 
 
 def setGravity(gravity_: int):
@@ -416,10 +424,7 @@ class ComponentPlayer(Screen):
         global playerY
         self.screen.blit(
             self.playerImgs[gravityDir],
-            (
-                playerX + int(Constants["centerx"] - gameLandWidth / 2 + 5) + borderDX,
-                playerY + yflex(1, 2) + 5 + borderDY,
-            ),
+            getPlayerXY(),
         )
 
         gaviter = True
@@ -503,6 +508,7 @@ class EntityGasterBlaster(Screen):
     rot: int
 
     def __init__(self, screen, x: int, y: int, rotation: int = 0):
+        rotation = int(rotation / 6) * 6
         super().__init__(screen)
         self.x = x
         self.y = y
@@ -517,19 +523,50 @@ class EntityGasterBlaster(Screen):
                 )
             )
 
+        w = Constants["screenx"] * 2
+        h = 96
+
+        surfacea = pygame.Surface((w, h))
+        surfacea.set_colorkey(Color["BLACK"])
+        surfacea.fill(Color["WHITE"])
+        img = surfacea.copy()
+        img.set_colorkey(Color["BLACK"])
+        rect = img.get_rect()
+        rect.center = (x, y)
+        old_ce = rect.center
+        nimg = pygame.transform.rotate(surfacea, self.rot - 90)
+        rec = nimg.get_rect()
+        rec.center = old_ce
+        self.rec = rec
+        self.nim = nimg
+
     def build(self):
         if self.frame < sec2frame(0.2):
             self.screen.blit(
                 self.imgs[int(self.frame / (sec2frame(0.2) / 4))], (self.x, self.y)
             )
         else:
-            rect = pygame.Surface(
-                (Constants["screenx"] * 2, self.imgs[4].get_rect().height)
+            self.screen.blit(
+                self.nim,
+                self.rec,
             )
-            rect = pygame.transform.rotate(rect, self.rot - 90)
-            rect.fill(Color["WHITE"])
-            self.screen.blit(rect, (self.x, self.y))
             self.screen.blit(self.imgs[4], (self.x, self.y))
+
+            if playerDamagedInThisFrame:
+                return
+
+            playerXY = getPlayerXY()
+            playerXY = (playerXY[0] + playerSize / 2, playerXY[1] + playerSize / 2)
+
+            points = obb.rec2points(
+                self.x, self.y, Constants["screenx"] * 2, 96, self.rot - 90
+            )
+            if obb.OBB(
+                points,
+                obb.Point(playerXY),
+            ):
+                insertDamage(1, False)
+
         self.frame += 1
 
 
@@ -562,8 +599,8 @@ class InGameScreen(Screen):
         self.gameLand = ComponentGameLand(self.screen)
         self.player = ComponentPlayer(self.screen)
 
-        frame = 0
-        self.entities.append((0, EntityGasterBlaster(self.screen, 0, 0, 90)))
+        frame = 1200
+        self.entities.append((0, EntityGasterBlaster(self.screen, 100, 0, 45)))
 
     def drawStats(self):
         self.krBar.build()
@@ -699,7 +736,7 @@ class InGameScreen(Screen):
         self.step3()
 
         for i in self.entities:
-            if i[0] + 180 < frame:
+            if i[0] + 360 < frame:
                 del i
                 continue
             i[1].build()
