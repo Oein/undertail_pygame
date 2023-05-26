@@ -29,10 +29,11 @@ class Screen:
         self.screen = screen
 
     def onKeyDown(self, e: KeyEvent):
-        print(f"{e.keyCode}, {e.mod}")
+        print(f"[Key][Press] {e.keyCode}, {e.mod}")
         pass
 
     def onKeyUp(self, e: KeyEvent):
+        print(f"[Key][Release] {e.keyCode}, {e.mod}")
         pass
 
     def build(self):
