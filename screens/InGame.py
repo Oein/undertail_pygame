@@ -500,57 +500,83 @@ class EntityBone(Screen):
             insertDamage(1)
 
 
+# Shoot after 0.5 sec
 class EntityGasterBlaster(Screen):
     imgs: list[pygame.Surface] = []
-    x: int
-    y: int
+
+    endX: int
+    endY: int
+    endRot: int
+
     frame: int = 0
-    rot: int
+    height = 96
+
+    x: int = Constants["centerx"] - 48
+    y: int = 0
 
     def __init__(self, screen, x: int, y: int, rotation: int = 0):
-        rotation = int(rotation / 6) * 6
         super().__init__(screen)
-        self.x = x
-        self.y = y
-        self.rot = rotation
+        self.endX = x
+        self.endY = y
+        self.endRot = rotation
+        self.rot = 0
         for i in range(5):
             self.imgs.append(
                 pygame.transform.scale2x(
-                    pygame.transform.rotate(
-                        pygame.image.load(f"images/GasterBlaster/{i}.png"),
-                        rotation - 90,
-                    )
+                    pygame.image.load(f"images/GasterBlaster/{i}.png")
                 )
             )
 
+        self.rotate(0)
+
+    def rotate(self, rot: int, opacity: float = 1):
+        opacity = min(opacity, 1)
         w = Constants["screenx"] * 2
-        h = 96
+        h = self.height
 
         surfacea = pygame.Surface((w, h))
         surfacea.set_colorkey(Color["BLACK"])
         surfacea.fill(Color["WHITE"])
+        surfacea.set_alpha(int(opacity * 255))
         img = surfacea.copy()
         img.set_colorkey(Color["BLACK"])
         rect = img.get_rect()
-        rect.center = (x, y)
+        rect.center = (self.x + int(h / 2), self.y + int(h / 2))
         old_ce = rect.center
-        nimg = pygame.transform.rotate(surfacea, self.rot - 90)
+        nimg = pygame.transform.rotate(surfacea, rot - 90)
         rec = nimg.get_rect()
         rec.center = old_ce
         self.rec = rec
         self.nim = nimg
 
+    def getImg(self):
+        img = self.imgs[min(int(self.frame / (sec2frame(0.5) / 4)), 4)]
+        img = pygame.transform.rotate(img, self.rot - 90)
+        return img
+
     def build(self):
-        if self.frame < sec2frame(0.2):
-            self.screen.blit(
-                self.imgs[int(self.frame / (sec2frame(0.2) / 4))], (self.x, self.y)
+        if self.frame < sec2frame(0.7):
+            self.x = min(int(self.endX / sec2frame(0.3) * self.frame), self.endX)
+            self.y = min(int(self.endY / sec2frame(0.3) * self.frame), self.endY)
+            self.rot = min(
+                int((self.endRot + 90) / sec2frame(0.3) * self.frame - 90), self.endRot
             )
-        else:
+
+            self.rotate(self.rot, self.frame / sec2frame(0.7))
+
             self.screen.blit(
                 self.nim,
                 self.rec,
             )
-            self.screen.blit(self.imgs[4], (self.x, self.y))
+            self.screen.blit(self.getImg(), (self.x, self.y))
+        else:
+            if self.frame <= sec2frame(0.7):
+                self.rotate(self.rot, self.frame / sec2frame(0.7))
+            self.screen.blit(
+                self.nim,
+                self.rec,
+            )
+            self.screen.blit(self.getImg(), (self.x, self.y))
 
             if playerDamagedInThisFrame:
                 return
@@ -559,7 +585,11 @@ class EntityGasterBlaster(Screen):
             playerXY = (playerXY[0] + playerSize / 2, playerXY[1] + playerSize / 2)
 
             points = obb.rec2points(
-                self.x, self.y, Constants["screenx"] * 2, 96, self.rot - 90
+                self.x + int(self.height / 2),
+                self.y + int(self.height / 2),
+                Constants["screenx"] * 2,
+                96,
+                self.rot - 90,
             )
             if obb.OBB(
                 points,
@@ -570,6 +600,24 @@ class EntityGasterBlaster(Screen):
         self.frame += 1
 
 
+class Entity:
+    frame: int
+    entity: Screen
+    entityMaxTime: int
+
+    def __init__(self, entity: Screen, entityTime: int = 360):
+        self.entity = entity
+        self.frame = 0
+        self.entityMaxTime = entityTime
+
+    def build(self):
+        self.frame += 1
+        if self.frame > self.entityMaxTime:
+            return False
+        self.entity.build()
+        return True
+
+
 class InGameScreen(Screen):
     sans: ComponentSans
     hpBar: ComponentHPBar
@@ -577,8 +625,9 @@ class InGameScreen(Screen):
     optionsCC: ComponentOptions
     gameLand: ComponentGameLand
     player: ComponentPlayer
+    startFrame = 1530
 
-    entities: list[tuple[int, EntityGasterBlaster]] = []
+    entities: list[Entity] = []
 
     def __init__(self, screen):
         super().__init__(screen)
@@ -592,15 +641,14 @@ class InGameScreen(Screen):
     def init(self):
         global frame
 
+        frame = self.startFrame
+
         self.sans = ComponentSans(self.screen)
         self.hpBar = ComponentHPBar(self.screen)
         self.krBar = ComponentKR(self.screen)
         self.optionsCC = ComponentOptions(self.screen)
         self.gameLand = ComponentGameLand(self.screen)
         self.player = ComponentPlayer(self.screen)
-
-        frame = 1200
-        self.entities.append((0, EntityGasterBlaster(self.screen, 100, 0, 45)))
 
     def drawStats(self):
         self.krBar.build()
@@ -645,6 +693,18 @@ class InGameScreen(Screen):
         copied = self.screen.copy()
         self.screen.fill("black")
         self.screen.blit(copied, getShakeOffest())
+
+    def addBlaster(self, x: int, y: int, rot: int):
+        self.entities.append(
+            Entity(
+                EntityGasterBlaster(
+                    self.screen,
+                    x,
+                    y,
+                    rot,
+                )
+            )
+        )
 
     def step1(self):
         global cannotMove, gravityDir
@@ -701,6 +761,7 @@ class InGameScreen(Screen):
             dingSound.play()
             gravityDir = 0
 
+    # v2f(15.900)
     def step3(self):
         # 뼈 Wave 14.183 ~ 15.900
         if v2f(15.900) >= frame >= v2f(14.183):
@@ -719,6 +780,21 @@ class InGameScreen(Screen):
                     downBoneHeight,
                 )
 
+    # 1537
+    def step4(self):
+        if frame == 1537:
+            boardXY = gmaeLandXY()
+            self.addBlaster(
+                boardXY[0] + 32 + int(playerSize * 2) + 120 - 64,
+                boardXY[1] - 96 - 10,
+                0,
+            )
+            self.addBlaster(
+                boardXY[0] - int(playerSize * 2) - 96,
+                boardXY[1],
+                90,
+            )
+
     def build(self):
         global frame, playerDamagedInThisFrame
 
@@ -734,9 +810,11 @@ class InGameScreen(Screen):
         self.step1()
         self.step2()
         self.step3()
+        self.step4()
 
-        for i in self.entities:
-            if i[0] + 360 < frame:
-                del i
-                continue
-            i[1].build()
+        deled = 0
+
+        for i in range(len(self.entities)):
+            if not self.entities[i - deled].build():
+                deled += 1
+                del self.entities[i - deled]
