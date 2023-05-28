@@ -1,8 +1,8 @@
+from components.Entity import Entity
 from oein import *
 from events.upDownBone import *
 from events.die import *
 from components.InGame.button import *
-import obb
 
 frame = 0
 maxHP = 100
@@ -85,125 +85,6 @@ def insertDamage(dmg: int, forced=False):
 
 def isPlayerInside(x: int, y: int, width: int, height: int):
     return x + width >= playerX >= x and y + height >= playerY >= y
-
-
-class ComponentSans(Screen):
-    sansImages: list[pygame.Surface]
-    sansEndX: int
-    sansStartY: int = yflex(1, 6)
-    frame: int = 0
-    saying: bool = False
-    gonnaSay: str = ""
-    saied: str = ""
-    sayingFrame: int = 0
-    boSay: bool = False
-    sansSpeakSound: pygame.mixer.Sound
-
-    def __init__(self, screen):
-        self.sansImages = []
-        for i in range(1, 19, 1):
-            self.sansImages.append(pygame.image.load(f"images/sans/sans{i}.png"))
-            self.sansImages[i - 1] = pygame.transform.scale(
-                self.sansImages[i - 1], (200, 200)
-            )
-        self.sansEndX = Constants["centerx"] + 100
-        self.frame = 0
-        self.sansSpeakSound = pygame.mixer.Sound("audio/SansSpeak.ogg")
-        super().__init__(screen)
-
-    def say(self, str: str):
-        if self.saying:
-            return
-        self.saied = ""
-        self.gonnaSay = str
-        self.saying = True
-        self.sayingFrame = 0
-        self.boSay = False
-
-    def boldSay(self, str: str):
-        if self.saying:
-            return
-        self.saied = ""
-        self.gonnaSay = str
-        self.saying = True
-        self.sayingFrame = 0
-        self.boSay = True
-        self.sansImages = [
-            pygame.transform.scale(
-                pygame.image.load("images/sans/noeye.png"), (200, 200)
-            )
-        ]
-        self.frame = 0
-
-    def build(self):
-        speed = 10
-        self.frame += 1
-        self.frame %= len(self.sansImages) * speed
-        self.screen.blit(
-            self.sansImages[int(self.frame / speed)],
-            (Constants["centerx"] - 100, self.sansStartY),
-        )
-
-        sayFrameW = 4
-
-        if self.boSay:
-            sayFrameW = 10
-
-        if self.saying:
-            if self.sayingFrame % sayFrameW == 0 and int(
-                self.sayingFrame / sayFrameW
-            ) < len(self.gonnaSay):
-                if self.gonnaSay[int(self.sayingFrame / sayFrameW)] != "\1":
-                    if self.boSay == False:
-                        self.sansSpeakSound.play()
-                    self.saied = (
-                        self.saied + self.gonnaSay[int(self.sayingFrame / sayFrameW)]
-                    )
-            self.sayingFrame += 1
-            drawImage(
-                "images/sans/message.png",
-                Constants["centerx"] + 105,
-                self.sansStartY + 30,
-                270,
-                100,
-            )
-            spli = self.saied.split("\n")
-            tcolr = Color["BLACK"]
-
-            if self.boSay == True:
-                tcolr = Color["RED"]
-
-            for i in range(len(spli)):
-                writeText(
-                    self.screen,
-                    spli[i],
-                    Font["text"](FontSize["div"]),
-                    tcolr,
-                    Constants["centerx"] + 105 + 40 + 5,
-                    self.sansStartY + 30 + 10 + 5 + (FontSize["div"] * i),
-                    None,
-                    Align.LEFT,
-                )
-
-            if int(self.sayingFrame / sayFrameW) > len(self.gonnaSay) + 15:
-                self.saied = ""
-                self.gonnaSay = ""
-                self.saying = False
-                self.sayingFrame = 0
-
-    def sansSays(self):
-        global frame
-
-        if frame == 60:
-            self.say("it's a beautiful\n\1day outside.")
-
-        if frame == 310:
-            self.say("birds are singing,\n\1\1\1\1flowers are\nblooming...\1\1")
-
-        if frame == 610:
-            self.say("on days like these,\n\1kids like you...")
-        if frame == 1000:
-            self.boldSay("Should be burning\nin hell.")
 
 
 class ComponentHPBar(Screen):
@@ -462,160 +343,9 @@ class ComponentPlayer(Screen):
             playerY = gameLandHeight - int(playerSize * 1.3)
 
 
-class EntityBone(Screen):
-    type: bool = False
-    img: pygame.Surface
-
-    def __init__(self, screen, type=False, rotate: int = 0):
-        super().__init__(screen)
-        self.type = type
-        fname = ""
-        if type:
-            fname = "_blue"
-        self.img = pygame.image.load(f"images/bone/vbone{fname}.png")
-        self.img = pygame.transform.rotate(self.img, rotate)
-
-    def build(self, x: int, y: int, height: int):
-        wid = 16
-        hei = height
-        if x < 0:
-            return
-        if x > gameLandWidth:
-            return
-        stx = x + borderDX + int(Constants["centerx"] - gameLandWidth / 2 + 5)
-        sty = y + borderDY + yflex(1, 2) + 5
-        if y + hei > gameLandHeight - 10:
-            hei = gameLandHeight - y - 10
-        if hei < 0:
-            hei = 0
-        self.screen.blit(
-            pygame.transform.scale(self.img, (32, hei)),
-            (
-                stx,
-                sty,
-            ),
-        )
-
-        if isPlayerInside(x, y, wid, hei):
-            insertDamage(1)
-
-
-# Shoot after 0.5 sec
-class EntityGasterBlaster(Screen):
-    imgs: list[pygame.Surface] = []
-
-    endX: int
-    endY: int
-    endRot: int
-
-    frame: int = 0
-    height = 96
-
-    x: int = Constants["centerx"] - 48
-    y: int = 0
-
-    def __init__(self, screen, x: int, y: int, rotation: int = 0):
-        super().__init__(screen)
-        self.endX = x
-        self.endY = y
-        self.endRot = rotation
-        self.rot = 0
-        for i in range(5):
-            self.imgs.append(
-                pygame.transform.scale2x(
-                    pygame.image.load(f"images/GasterBlaster/{i}.png")
-                )
-            )
-
-        self.rotate(0)
-
-    def rotate(self, rot: int, opacity: float = 1):
-        opacity = min(opacity, 1)
-        w = Constants["screenx"] * 2
-        h = self.height
-
-        surfacea = pygame.Surface((w, h))
-        surfacea.set_colorkey(Color["BLACK"])
-        surfacea.fill(Color["WHITE"])
-        surfacea.set_alpha(int(opacity * 255))
-        img = surfacea.copy()
-        img.set_colorkey(Color["BLACK"])
-        rect = img.get_rect()
-        rect.center = (self.x + int(h / 2), self.y + int(h / 2))
-        old_ce = rect.center
-        nimg = pygame.transform.rotate(surfacea, rot - 90)
-        rec = nimg.get_rect()
-        rec.center = old_ce
-        self.rec = rec
-        self.nim = nimg
-
-    def getImg(self):
-        img = self.imgs[min(int(self.frame / (sec2frame(0.5) / 4)), 4)]
-        img = pygame.transform.rotate(img, self.rot - 90)
-        return img
-
-    def build(self):
-        if self.frame < sec2frame(0.7):
-            self.x = min(int(self.endX / sec2frame(0.3) * self.frame), self.endX)
-            self.y = min(int(self.endY / sec2frame(0.3) * self.frame), self.endY)
-            self.rot = min(
-                int((self.endRot + 90) / sec2frame(0.3) * self.frame - 90), self.endRot
-            )
-
-            self.rotate(self.rot, self.frame / sec2frame(0.7))
-
-            self.screen.blit(
-                self.nim,
-                self.rec,
-            )
-            self.screen.blit(self.getImg(), (self.x, self.y))
-        else:
-            if self.frame <= sec2frame(0.7):
-                self.rotate(self.rot, self.frame / sec2frame(0.7))
-            self.screen.blit(
-                self.nim,
-                self.rec,
-            )
-            self.screen.blit(self.getImg(), (self.x, self.y))
-
-            if playerDamagedInThisFrame:
-                return
-
-            playerXY = getPlayerXY()
-            playerXY = (playerXY[0] + playerSize / 2, playerXY[1] + playerSize / 2)
-
-            points = obb.rec2points(
-                self.x + int(self.height / 2),
-                self.y + int(self.height / 2),
-                Constants["screenx"] * 2,
-                96,
-                self.rot - 90,
-            )
-            if obb.OBB(
-                points,
-                obb.Point(playerXY),
-            ):
-                insertDamage(1, False)
-
-        self.frame += 1
-
-
-class Entity:
-    frame: int
-    entity: Screen
-    entityMaxTime: int
-
-    def __init__(self, entity: Screen, entityTime: int = 360):
-        self.entity = entity
-        self.frame = 0
-        self.entityMaxTime = entityTime
-
-    def build(self):
-        self.frame += 1
-        if self.frame > self.entityMaxTime:
-            return False
-        self.entity.build()
-        return True
+from components.EntityBone import EntityBone
+from components.EntityGasterBlaster import EntityGasterBlaster
+from components.Sans import ComponentSans
 
 
 class InGameScreen(Screen):
@@ -658,10 +388,6 @@ class InGameScreen(Screen):
         self.screen.fill("black")
 
         self.sans.sansSays()
-        self.sans.build()
-        self.drawStats()
-        self.optionsCC.build()
-        self.player.build()
         self.gameLand.build()
 
         writeText(
@@ -674,6 +400,13 @@ class InGameScreen(Screen):
             bgColor=None,
             align=Align.RIGHT,
         )
+
+    def mustDrawOverlay(self):
+        self.sans.build()
+        drawRect(Color["BLACK"], xflex(2, 8) - 10, yflex(8, 10) - 10, xflex(4, 8), 200)
+        self.drawStats()
+        self.optionsCC.build()
+        self.player.build()
 
     def onKeyUp(self, e: KeyEvent):
         global gravityDir
@@ -818,3 +551,5 @@ class InGameScreen(Screen):
             if not self.entities[i - deled].build():
                 deled += 1
                 del self.entities[i - deled]
+
+        self.mustDrawOverlay()
