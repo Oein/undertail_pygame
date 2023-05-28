@@ -3,8 +3,8 @@ import obb
 from screens.InGame import (
     getPlayerXY,
     insertDamage,
-    playerDamagedInThisFrame,
-    playerSize,
+    getPlayerDamagedInThisFrame,
+    getPlayerSize,
 )
 
 
@@ -87,11 +87,14 @@ class EntityGasterBlaster(Screen):
             )
             self.screen.blit(self.getImg(), (self.x, self.y))
 
-            if playerDamagedInThisFrame:
+            if getPlayerDamagedInThisFrame():
                 return
 
             playerXY = getPlayerXY()
-            playerXY = (playerXY[0] + playerSize / 2, playerXY[1] + playerSize / 2)
+            playerXY = (
+                playerXY[0] + getPlayerSize() / 2,
+                playerXY[1] + getPlayerSize() / 2,
+            )
 
             points = obb.rec2points(
                 self.x + int(self.height / 2),

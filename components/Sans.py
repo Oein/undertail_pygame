@@ -1,6 +1,7 @@
 from oein import *
 import pygame
-from screens.InGame import frame
+from screens.InGame import getFrame
+from constants.SansMessages import messages
 
 
 class ComponentSans(Screen):
@@ -108,11 +109,9 @@ class ComponentSans(Screen):
                 self.sayingFrame = 0
 
     def sansSays(self):
-        if frame == 60:
-            self.say("it's a beautiful\n\1day outside.")
-        if frame == 310:
-            self.say("birds are singing,\n\1\1\1\1flowers are\nblooming...\1\1")
-        if frame == 610:
-            self.say("on days like these,\n\1kids like you...")
-        if frame == 1000:
-            self.boldSay("Should be burning\nin hell.")
+        msg = messages.get(getFrame())
+        if msg is not None:
+            if msg[1]:
+                self.boldSay(msg[0])
+            else:
+                self.say(msg[0])

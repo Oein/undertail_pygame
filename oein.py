@@ -4,6 +4,8 @@ import random
 import math
 from dictClassType import *
 
+from constants.PygameAttributes import *
+
 
 class KeyEvent:
     def __init__(
@@ -55,15 +57,6 @@ class Screen:
 Font = DictTypeFont(
     title=lambda size: pygame.font.Font("fonts/title.ttf", size),
     text=lambda size: pygame.font.Font("fonts/chat.ttf", size),
-)
-
-
-Constants = DictTypeConstants(
-    screenx=1280,
-    screeny=720,
-    centerx=int(1280 / 2),
-    centery=int(720 / 2),
-    framerate=60,
 )
 
 Color = DictTypeColor(

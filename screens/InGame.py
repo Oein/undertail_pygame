@@ -86,6 +86,14 @@ def insertDamage(dmg: int, forced=False):
 def isPlayerInside(x: int, y: int, width: int, height: int):
     return x + width >= playerX >= x and y + height >= playerY >= y
 
+def getFrame():
+    return frame
+
+def getPlayerDamagedInThisFrame():
+    return playerDamagedInThisFrame
+
+def getPlayerSize():
+    return playerSize
 
 class ComponentHPBar(Screen):
     hpBarWidth = 250
@@ -355,7 +363,7 @@ class InGameScreen(Screen):
     optionsCC: ComponentOptions
     gameLand: ComponentGameLand
     player: ComponentPlayer
-    startFrame = 1530
+    startFrame = 0
 
     entities: list[Entity] = []
 

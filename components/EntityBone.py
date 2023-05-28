@@ -2,9 +2,9 @@ from oein import *
 from screens.InGame import (
     insertDamage,
     gameLandWidth,
+    gameLandHeight,
     borderDX,
     borderDY,
-    gameLandHeight,
     isPlayerInside,
 )
 
