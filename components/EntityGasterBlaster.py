@@ -29,6 +29,9 @@ def getSpawnTimeByShoot(shootFrame: float):
     return round(shootFrame - sec2frame(0.799))
 
 
+rotMap = [{}, {}, {}, {}, {}]
+
+
 # Shoot after 0.5 sec
 class EntityGasterBlaster(Screen):
     imgs: list[pygame.Surface] = []
@@ -117,8 +120,12 @@ class EntityGasterBlaster(Screen):
             ),
             0,
         )
+        imgItem = rotMap[idx].get(self.rot - 90)
+        if imgItem is not None:
+            return imgItem
         img = self.imgs[idx]
         img = pygame.transform.rotate(img, self.rot - 90)
+        rotMap[idx][self.rot - 90] = img
         return img
 
     def animate(self, endX: int, endY: int, endRot: int, opacity: float, frame: int):
