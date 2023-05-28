@@ -3,6 +3,7 @@ from oein import *
 from events.upDownBone import *
 from events.die import *
 from components.InGame.button import *
+from constants.Timings import timings
 
 frame = 0
 maxHP = 100
@@ -29,6 +30,7 @@ cannotMove = False
 attackSound: pygame.mixer.Sound
 damagedSound: pygame.mixer.Sound
 dingSound: pygame.mixer.Sound
+
 playerDamagedInThisFrame = False
 
 playerX = 0
@@ -86,14 +88,18 @@ def insertDamage(dmg: int, forced=False):
 def isPlayerInside(x: int, y: int, width: int, height: int):
     return x + width >= playerX >= x and y + height >= playerY >= y
 
+
 def getFrame():
     return frame
+
 
 def getPlayerDamagedInThisFrame():
     return playerDamagedInThisFrame
 
+
 def getPlayerSize():
     return playerSize
+
 
 class ComponentHPBar(Screen):
     hpBarWidth = 250
@@ -352,7 +358,7 @@ class ComponentPlayer(Screen):
 
 
 from components.EntityBone import EntityBone
-from components.EntityGasterBlaster import EntityGasterBlaster
+from components.EntityGasterBlaster import *
 from components.Sans import ComponentSans
 
 
@@ -363,7 +369,7 @@ class InGameScreen(Screen):
     optionsCC: ComponentOptions
     gameLand: ComponentGameLand
     player: ComponentPlayer
-    startFrame = 0
+    startFrame = 1400
 
     entities: list[Entity] = []
 
@@ -376,9 +382,11 @@ class InGameScreen(Screen):
         damagedSound = pygame.mixer.Sound("audio/dmg.ogg")
         dingSound = pygame.mixer.Sound("audio/ding.ogg")
 
+        pygame.mixer.music.load("audio/bgm.ogg")
+        pygame.mixer.music.stop()
+
     def init(self):
         global frame
-
         frame = self.startFrame
 
         self.sans = ComponentSans(self.screen)
@@ -397,6 +405,10 @@ class InGameScreen(Screen):
 
         self.sans.sansSays()
         self.gameLand.build()
+        self.sans.build()
+        drawRect(Color["BLACK"], xflex(2, 8) - 10, yflex(8, 10) - 10, xflex(4, 8), 200)
+        self.drawStats()
+        self.optionsCC.build()
 
         writeText(
             screen=self.screen,
@@ -410,10 +422,6 @@ class InGameScreen(Screen):
         )
 
     def mustDrawOverlay(self):
-        self.sans.build()
-        drawRect(Color["BLACK"], xflex(2, 8) - 10, yflex(8, 10) - 10, xflex(4, 8), 200)
-        self.drawStats()
-        self.optionsCC.build()
         self.player.build()
 
     def onKeyUp(self, e: KeyEvent):
@@ -521,19 +529,74 @@ class InGameScreen(Screen):
                     downBoneHeight,
                 )
 
-    # 1537
+    # 레아져, 왼쪽 위
+    # v2f(16.033)
     def step4(self):
-        if frame == 1537:
+        if frame == getSpawnTimeByShoot(v2f(16.033)):
             boardXY = gmaeLandXY()
+            # TOP_LEFT
             self.addBlaster(
-                boardXY[0] + 32 + int(playerSize * 2) + 120 - 64,
+                boardXY[0],
                 boardXY[1] - 96 - 10,
                 0,
             )
+            # LEFT_TOP
             self.addBlaster(
                 boardXY[0] - int(playerSize * 2) - 96,
                 boardXY[1],
                 90,
+            )
+
+    # 레이져, 오른쪽 아래
+    # v2f(15.950)
+    def step5(self):
+        if frame == getSpawnTimeByShoot(v2f(15.950)):
+            boardXY = gmaeLandXY()
+            # RIGHT_BOTTOM
+            self.addBlaster(
+                boardXY[0] + 32 + int(playerSize * 2) + 120 - 64 + 120,
+                boardXY[1] + 132,
+                270,
+            )
+
+            # BOTTOM_RIGHT
+            self.addBlaster(
+                boardXY[0] + 32 + int(playerSize * 2) + 120 - 64,
+                boardXY[1] + 132 + 120,
+                180,
+            )
+
+    # 레이져, 대각선
+    # v2f(16.783)
+    def step6(self):
+        if frame == getSpawnTimeByShoot(v2f(16.783)):
+            boardXY = gmaeLandXY()
+            # RIGHT_BOTTOM
+            self.addBlaster(
+                boardXY[0] + int(playerSize * 2) + 188,
+                boardXY[1] + 228,
+                225,
+            )
+
+            # RIGHT_TOP
+            self.addBlaster(
+                boardXY[0] + 32 + int(playerSize * 2) + 188,
+                boardXY[1] - 96,
+                315,
+            )
+
+            # LEFT_TOP
+            self.addBlaster(
+                boardXY[0] - 96,
+                boardXY[1] - 96,
+                45,
+            )
+
+            # LEFT_BOTTOM
+            self.addBlaster(
+                boardXY[0] - 96,
+                boardXY[1] + 228,
+                135,
             )
 
     def build(self):
@@ -548,10 +611,15 @@ class InGameScreen(Screen):
         if frame % 2 == 0:
             playerDamagedInThisFrame = False
 
+        if frame == timings["bgmPlay"]:
+            pygame.mixer.music.play(0)
+
         self.step1()
         self.step2()
         self.step3()
         self.step4()
+        self.step5()
+        self.step6()
 
         deled = 0
 

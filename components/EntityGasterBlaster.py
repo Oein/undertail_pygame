@@ -7,10 +7,33 @@ from screens.InGame import (
     getPlayerSize,
 )
 
+# 0 (MovStart)
+# 0.366 (MovEnd)
+# 0.699 (AniStart)
+# 0.799 (AniEnd & Lazer)
+# 0.983 (GoOutStart)
+# 1.366 (LazerEnd, GoOutEnd)
+
+
+def ignoreZero(num: float):
+    if num == 0:
+        return 0.01
+    return num
+
+
+dx = [0, -200, 0, Constants["screenx"]]
+dy = [-200, 0, Constants["screeny"], 0]
+
+
+def getSpawnTimeByShoot(shootFrame: float):
+    return round(shootFrame - sec2frame(0.799))
+
 
 # Shoot after 0.5 sec
 class EntityGasterBlaster(Screen):
     imgs: list[pygame.Surface] = []
+
+    shootHeight: int = 0
 
     endX: int
     endY: int
@@ -22,11 +45,35 @@ class EntityGasterBlaster(Screen):
     x: int = Constants["centerx"] - 48
     y: int = 0
 
-    def __init__(self, screen, x: int, y: int, rotation: int = 0):
+    opacity: float = 0
+
+    animaiting = False
+    aniStartFrame: int = 0
+    aniEndFrame: int = 0
+
+    aniStartX: int = 0
+    aniStartY: int = 0
+    aniStartR: int = 0
+    aniStartO: int = 1
+
+    aniDiffX: float = 0
+    aniDiffY: float = 0
+    aniDiffR: float = 0
+    aniDiffO: float = 0
+
+    def __init__(
+        self,
+        screen,
+        x: int,
+        y: int,
+        rotation: int = 0,
+        shootHeight: int = round(getPlayerSize() * 2.5),
+    ):
         super().__init__(screen)
         self.endX = x
         self.endY = y
         self.endRot = rotation
+        self.shootHeight = shootHeight
         self.rot = 0
         for i in range(5):
             self.imgs.append(
@@ -35,12 +82,13 @@ class EntityGasterBlaster(Screen):
                 )
             )
 
-        self.rotate(0)
+        self.rotate(rotation + 180)
+        self.animate(x, y, rotation, 0, sec2frame(0.366))
 
     def rotate(self, rot: int, opacity: float = 1):
         opacity = min(opacity, 1)
-        w = Constants["screenx"] * 2
-        h = self.height
+        w = Constants["screenx"] * 4
+        h = self.shootHeight
 
         surfacea = pygame.Surface((w, h))
         surfacea.set_colorkey(Color["BLACK"])
@@ -58,38 +106,110 @@ class EntityGasterBlaster(Screen):
         self.nim = nimg
 
     def getImg(self):
-        img = self.imgs[min(int(self.frame / (sec2frame(0.5) / 4)), 4)]
+        idx = max(
+            min(
+                round(
+                    4
+                    * max(ignoreZero(self.frame - sec2frame(0.699)), 0.001)
+                    / sec2frame(0.1)
+                ),
+                4,
+            ),
+            0,
+        )
+        img = self.imgs[idx]
         img = pygame.transform.rotate(img, self.rot - 90)
         return img
 
+    def animate(self, endX: int, endY: int, endRot: int, opacity: float, frame: int):
+        self.aniStartFrame = self.frame
+        self.aniEndFrame = self.frame + frame
+
+        self.aniStartX = self.x
+        self.aniStartY = self.y
+        self.aniStartR = self.rot
+        self.aniStartO = self.opacity
+
+        self.aniDiffX = (endX - self.x) / frame
+        self.aniDiffY = (endY - self.y) / frame
+        self.aniDiffR = (endRot - self.rot) / frame
+        self.aniDiffO = (opacity - self.opacity) / frame
+
+        self.animaiting = True
+
+    def calculateAnimation(self):
+        if not (self.animaiting):
+            return
+
+        self.x = round(
+            self.aniStartX + self.aniDiffX * (self.frame - self.aniStartFrame)
+        )
+        self.y = round(
+            self.aniStartY + self.aniDiffY * (self.frame - self.aniStartFrame)
+        )
+        self.rot = round(
+            self.aniStartR + self.aniDiffR * (self.frame - self.aniStartFrame)
+        )
+        self.opacity = self.aniStartO + self.aniDiffO * (
+            self.frame - self.aniStartFrame
+        )
+        self.rotate(self.rot, self.opacity)
+
+        if self.frame >= self.aniEndFrame:
+            self.animaiting = False
+
     def build(self):
-        if self.frame < sec2frame(0.7):
-            self.x = min(int(self.endX / sec2frame(0.3) * self.frame), self.endX)
-            self.y = min(int(self.endY / sec2frame(0.3) * self.frame), self.endY)
-            self.rot = min(
-                int((self.endRot + 90) / sec2frame(0.3) * self.frame - 90), self.endRot
-            )
+        self.calculateAnimation()
 
-            self.rotate(self.rot, self.frame / sec2frame(0.7))
+        if self.frame == sec2frame(0.700):
+            self.animate(self.x, self.y, self.rot, 1, sec2frame(0.810 - 0.720))
+        if self.frame == sec2frame(0.983):
+            newX = self.x
+            newY = self.y
 
-            if self.frame > sec2frame(0.4):
-                self.screen.blit(
-                    self.nim,
-                    self.rec,
+            differer = max(self.x, self.y) + 200
+            difMaxer = (
+                max(
+                    abs(Constants["screenx"] - self.x),
+                    abs(Constants["screeny"] - self.y),
                 )
-            self.screen.blit(self.getImg(), (self.x, self.y))
-        else:
-            if self.frame <= sec2frame(0.7):
-                self.rotate(self.rot, self.frame / sec2frame(0.7))
-            self.screen.blit(
-                self.nim,
-                self.rec,
+                + 200
             )
-            self.screen.blit(self.getImg(), (self.x, self.y))
 
-            if getPlayerDamagedInThisFrame():
-                return
+            if self.rot == 0:
+                newY = -200
+            if self.rot == 90:
+                newX = -200
+            if self.rot == 180:
+                newY = Constants["screeny"] + 200
+            if self.rot == 270:
+                newX = Constants["screenx"] + 200
+            if self.rot == 45:
+                newX = newX - differer
+                newY = newY - differer
+            if self.rot == 135:
+                newX = newX - difMaxer
+                newY = newY + difMaxer
+            if self.rot == 225:
+                newX = newX + difMaxer
+                newY = newY + difMaxer
+            if self.rot == 315:
+                newX = newX + differer
+                newY = newY - differer
 
+            self.animate(newX, newY, self.rot, 0.2, sec2frame(1.366 - 0.983))
+        if self.frame == sec2frame(1.366):
+            self.animate(self.x, self.y, self.rot, 0, sec2frame(0.1))
+
+        self.screen.blit(
+            self.nim,
+            self.rec,
+        )
+        self.screen.blit(self.getImg(), (self.x, self.y))
+
+        if not getPlayerDamagedInThisFrame() and sec2frame(
+            0.810
+        ) <= self.frame <= sec2frame(1.15):
             playerXY = getPlayerXY()
             playerXY = (
                 playerXY[0] + getPlayerSize() / 2,
