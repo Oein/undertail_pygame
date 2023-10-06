@@ -90,7 +90,7 @@ class EntityGasterBlaster(Screen):
 
     def rotate(self, rot: int, opacity: float = 1):
         opacity = min(opacity, 1)
-        w = Constants["screenx"] * 4
+        w = Constants["screenx"] * 2.5
         h = self.shootHeight
 
         surfacea = pygame.Surface((w, h))
@@ -226,7 +226,7 @@ class EntityGasterBlaster(Screen):
             points = obb.rec2points(
                 self.x + int(self.height / 2),
                 self.y + int(self.height / 2),
-                Constants["screenx"] * 2,
+                Constants["screenx"] * 2.5,
                 96,
                 self.rot - 90,
             )

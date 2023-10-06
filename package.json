@@ -3,6 +3,8 @@
     "nodemon": "^2.0.22"
   },
   "scripts": {
-    "dev": "nodemon --ext py --exec \"python3.10 main.py\""
+    "dev": "nodemon --ext py --exec \"python3 main.py\"",
+    "start": "python3 main.py",
+    "install": "pip3 install pygame numpy shapely"
   }
 }

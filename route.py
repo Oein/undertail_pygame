@@ -27,6 +27,7 @@ def push(lopath: str):
     if path != lopath:
         pathQueue.append(lopath)
         path = lopath
+        routes[path].onLoad()
 
 
 def to(lopath: str):
@@ -35,6 +36,7 @@ def to(lopath: str):
     if path != lopath:
         pathQueue = [lopath]
         path = lopath
+        routes[path].onLoad()
 
 
 def back():
@@ -44,3 +46,4 @@ def back():
     if len(pathQueue) != 1:
         del pathQueue[-1]
         path = pathQueue[-1]
+        routes[path].onLoad()

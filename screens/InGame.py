@@ -373,6 +373,8 @@ class InGameScreen(Screen):
 
     entities: list[Entity] = []
 
+    musicTime = 0
+
     def __init__(self, screen):
         super().__init__(screen)
         global attackSound
@@ -431,9 +433,15 @@ class InGameScreen(Screen):
 
         if e.keyCode == KeyCode["ESC"]:
             route.push("/pause")
+            pygame.mixer.pause()
 
-        if e.keyCode == KeyCode["ENTER"]:
-            gravityDir = (gravityDir + 1) % 5
+    def onPause(self):
+        self.musicTime = pygame.mixer.music.get_pos()
+        pygame.mixer.music.pause()
+
+    def onLoad(self):
+        pygame.mixer.music.play()
+        pygame.mixer.music.set_pos(self.musicTime)
 
     def onKeyDown(self, e: KeyEvent):
         self.player.onKeyDown(e)

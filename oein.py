@@ -38,6 +38,12 @@ class Screen:
         print(f"[Key][Release] {e.keyCode}, {e.mod}")
         pass
 
+    def onPause(self):
+        pass
+
+    def onLoad(self):
+        pass
+
     def build(self):
         self.superBuild()
 
